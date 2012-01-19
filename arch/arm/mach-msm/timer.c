@@ -1171,10 +1171,9 @@ int __cpuinit local_timer_setup(struct clock_event_device *evt)
 	return 0;
 }
 
-void local_timer_stop(struct clock_event_device *evt)
+inline int local_timer_ack(void)
 {
-	evt->set_mode(CLOCK_EVT_MODE_UNUSED, evt);
-	disable_percpu_irq(evt->irq);
+	return 1;
 }
 #endif
 

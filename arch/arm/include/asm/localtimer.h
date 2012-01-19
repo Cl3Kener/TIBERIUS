@@ -25,14 +25,15 @@ void percpu_timer_setup(void);
 
 #include "smp_twd.h"
 
-#define local_timer_stop(c)	twd_timer_stop((c))
+#define local_timer_ack()	twd_timer_ack()
 
 #else
 
 /*
- * Stop the local timer
+ * Platform provides this to acknowledge a local timer IRQ.
+ * Returns true if the local timer IRQ is to be processed.
  */
-void local_timer_stop(struct clock_event_device *);
+int local_timer_ack(void);
 
 #endif
 
@@ -48,9 +49,6 @@ static inline int local_timer_setup(struct clock_event_device *evt)
 	return -ENXIO;
 }
 
-static inline void local_timer_stop(struct clock_event_device *evt)
-{
-}
 #endif
 
 #endif
