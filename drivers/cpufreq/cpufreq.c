@@ -29,6 +29,7 @@
 #include <linux/completion.h>
 #include <linux/mutex.h>
 #include <linux/syscore_ops.h>
+#include <linux/cpugovsync.h>
 
 #include <trace/events/power.h>
 
@@ -485,16 +486,18 @@ static ssize_t store_scaling_governor(struct cpufreq_policy *policy,
 
 	/* allow the user to force governor changes from one core to apply to the other */
 #ifdef CONFIG_LINK_CPU_GOVERNORS
-	ret = cpufreq_get_policy(&new_policy, policy->cpu ? 0 : 1);
-	if(!ret) {
-		struct cpufreq_policy* cpu_alt=cpufreq_cpu_get(policy->cpu ? 0 : 1);
-		if (cpu_alt != NULL) {
-			cpufreq_parse_governor(str_governor, &new_policy.policy,
-			&new_policy.governor);
-			__cpufreq_set_policy(cpu_alt, &new_policy);
-			cpu_alt->user_policy.policy = cpu_alt->policy;
-			cpu_alt->user_policy.governor = cpu_alt->governor;
-			cpufreq_cpu_put(cpu_alt);
+	if (force_cpu_gov_sync != 0) {
+		ret = cpufreq_get_policy(&new_policy, policy->cpu ? 0 : 1);
+		if(!ret) {
+			struct cpufreq_policy* cpu_alt=cpufreq_cpu_get(policy->cpu ? 0 : 1);
+			if (cpu_alt != NULL) {
+				cpufreq_parse_governor(str_governor, &new_policy.policy,
+				&new_policy.governor);
+				__cpufreq_set_policy(cpu_alt, &new_policy);
+				cpu_alt->user_policy.policy = cpu_alt->policy;
+				cpu_alt->user_policy.governor = cpu_alt->governor;
+				cpufreq_cpu_put(cpu_alt);
+			}
 		}
 	}
 #endif
