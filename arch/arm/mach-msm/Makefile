@@ -22,7 +22,8 @@ BOARD_OBJ_NAME:=board-msm8x60_p5lte.o
 GPIOMUX_OBJ_NAME:=gpiomux-8x60_p5lte.o
 endif
 
-obj-y += io.o dma.o memory.o
+obj-y += io.o dma.o memory.o 
+obj-$(CONFIG_MSM_MPDEC)			+= msm_mpdecision.o
 ifndef CONFIG_ARM_ARCH_TIMER
 obj-y += timer.o
 endif
