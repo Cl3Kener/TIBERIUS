@@ -196,7 +196,7 @@ static int mp_decision(void)
 
 	last_time = ktime_to_ms(ktime_get());
 #if DEBUG
-        pr_info(MPDEC_TAG"[DEBUG] rq: %u, new_state: %i | Mask=[%d%d%d%d]\n",
+        pr_info(MPDEC_TAG"[DEBUG] rq: %u, new_state: %i | Mask=[%d%d]\n",
                 rq_depth, new_state, cpu_online(0), cpu_online(1));
 #endif
 	return new_state;
@@ -246,7 +246,7 @@ static void msm_mpdec_work_thread(struct work_struct *work)
 				cpu_down(cpu);
 				per_cpu(msm_mpdec_cpudata, cpu).online = false;
 				on_time = ktime_to_ms(ktime_get()) - per_cpu(msm_mpdec_cpudata, cpu).on_time;
-				pr_info(MPDEC_TAG"CPU[%d] on->off | Mask=[%d%d%d%d] | time online: %llu\n",
+				pr_info(MPDEC_TAG"CPU[%d] on->off | Mask=[%d%d] | time online: %llu\n",
 						cpu, cpu_online(0), cpu_online(1), on_time);
 			} else if (per_cpu(msm_mpdec_cpudata, cpu).online != cpu_online(cpu)) {
 				pr_info(MPDEC_TAG"CPU[%d] was controlled outside of mpdecision! | pausing [%d]ms\n",
@@ -263,7 +263,7 @@ static void msm_mpdec_work_thread(struct work_struct *work)
 				cpu_up(cpu);
 				per_cpu(msm_mpdec_cpudata, cpu).online = true;
 				per_cpu(msm_mpdec_cpudata, cpu).on_time = ktime_to_ms(ktime_get());
-				pr_info(MPDEC_TAG"CPU[%d] off->on | Mask=[%d%d%d%d]\n",
+				pr_info(MPDEC_TAG"CPU[%d] off->on | Mask=[%d%d]\n",
 						cpu, cpu_online(0), cpu_online(1));
 			} else if (per_cpu(msm_mpdec_cpudata, cpu).online != cpu_online(cpu)) {
 				pr_info(MPDEC_TAG"CPU[%d] was controlled outside of mpdecision! | pausing [%d]ms\n",
@@ -293,7 +293,7 @@ static void msm_mpdec_early_suspend(struct early_suspend *h)
 		mutex_lock(&per_cpu(msm_mpdec_cpudata, cpu).suspend_mutex);
 		if ((cpu >= 1) && (cpu_online(cpu))) {
                         cpu_down(cpu);
-                        pr_info(MPDEC_TAG"Screen -> off. Suspended CPU[%d] | Mask=[%d%d%d%d]\n",
+                        pr_info(MPDEC_TAG"Screen -> off. Suspended CPU[%d] | Mask=[%d%d]\n",
                                 cpu, cpu_online(0), cpu_online(1));
 			per_cpu(msm_mpdec_cpudata, cpu).online = false;
 		}
@@ -319,7 +319,7 @@ static void msm_mpdec_late_resume(struct early_suspend *h)
 		cpu_up(1);
 		per_cpu(msm_mpdec_cpudata, 1).on_time = ktime_to_ms(ktime_get());
 		per_cpu(msm_mpdec_cpudata, 1).online = true;
-		pr_info(MPDEC_TAG"Screen -> on. Hot plugged CPU1 | Mask=[%d%d%d%d]\n",
+		pr_info(MPDEC_TAG"Screen -> on. Hot plugged CPU1 | Mask=[%d%d]\n",
                         cpu_online(0), cpu_online(1));
 	}
 	mutex_unlock(&per_cpu(msm_mpdec_cpudata, 1).suspend_mutex);
@@ -328,7 +328,7 @@ static void msm_mpdec_late_resume(struct early_suspend *h)
         was_paused = true;
         queue_delayed_work(msm_mpdec_workq, &msm_mpdec_work, 0);
 
-        pr_info(MPDEC_TAG"Screen -> on. Activated mpdecision. | Mask=[%d%d%d%d]\n",
+        pr_info(MPDEC_TAG"Screen -> on. Activated mpdecision. | Mask=[%d%d]\n",
 		cpu_online(0), cpu_online(1));
 }
 
@@ -361,10 +361,8 @@ static ssize_t show_##file_name                                         \
 {                                                                       \
 	return sprintf(buf, "%u\n", TwTs_Threshold[arraypos]);          \
 }
-show_one_twts(twts_threshold_0, 0);
-show_one_twts(twts_threshold_1, 1);
-show_one_twts(twts_threshold_2, 2);
-show_one_twts(twts_threshold_3, 3);
+show_one_twts(twts_threshold_up, 0);
+show_one_twts(twts_threshold_down, 3);
 
 #define store_one_twts(file_name, arraypos)                             \
 static ssize_t store_##file_name                                        \
@@ -379,10 +377,8 @@ static ssize_t store_##file_name                                        \
 	return count;                                                   \
 }                                                                       \
 define_one_global_rw(file_name);
-store_one_twts(twts_threshold_0, 0);
-store_one_twts(twts_threshold_1, 1);
-store_one_twts(twts_threshold_2, 2);
-store_one_twts(twts_threshold_3, 3);
+store_one_twts(twts_threshold_up, 0);
+store_one_twts(twts_threshold_down, 3);
 
 #define show_one_nwns(file_name, arraypos)                              \
 static ssize_t show_##file_name                                         \
@@ -390,10 +386,8 @@ static ssize_t show_##file_name                                         \
 {                                                                       \
 	return sprintf(buf, "%u\n", NwNs_Threshold[arraypos]);          \
 }
-show_one_nwns(nwns_threshold_0, 0);
-show_one_nwns(nwns_threshold_1, 1);
-show_one_nwns(nwns_threshold_2, 2);
-show_one_nwns(nwns_threshold_3, 3);
+show_one_nwns(nwns_threshold_up, 0);
+show_one_nwns(nwns_threshold_down, 3);
 
 #define store_one_nwns(file_name, arraypos)                             \
 static ssize_t store_##file_name                                        \
@@ -408,10 +402,8 @@ static ssize_t store_##file_name                                        \
 	return count;                                                   \
 }                                                                       \
 define_one_global_rw(file_name);
-store_one_nwns(nwns_threshold_0, 0);
-store_one_nwns(nwns_threshold_1, 1);
-store_one_nwns(nwns_threshold_2, 2);
-store_one_nwns(nwns_threshold_3, 3);
+store_one_nwns(nwns_threshold_up, 0);
+store_one_nwns(nwns_threshold_down, 3);
 
 static ssize_t show_idle_freq (struct kobject *kobj, struct attribute *attr,
                                    char *buf)
@@ -578,7 +570,7 @@ static ssize_t store_enabled(struct kobject *a, struct attribute *b,
                                 per_cpu(msm_mpdec_cpudata, cpu).on_time = ktime_to_ms(ktime_get());
                                 per_cpu(msm_mpdec_cpudata, cpu).online = true;
                                 cpu_up(cpu);
-                                pr_info(MPDEC_TAG"nap time... Hot plugged CPU[%d] | Mask=[%d%d%d%d]\n",
+                                pr_info(MPDEC_TAG"nap time... Hot plugged CPU[%d] | Mask=[%d%d]\n",
                                         cpu, cpu_online(0), cpu_online(1));
                         }
                 }
@@ -614,14 +606,10 @@ static struct attribute *msm_mpdec_attributes[] = {
         &min_cpus.attr,
         &max_cpus.attr,
 	&enabled.attr,
-	&twts_threshold_0.attr,
-	&twts_threshold_1.attr,
-	&twts_threshold_2.attr,
-	&twts_threshold_3.attr,
-	&nwns_threshold_0.attr,
-	&nwns_threshold_1.attr,
-	&nwns_threshold_2.attr,
-	&nwns_threshold_3.attr,
+	&twts_threshold_up.attr,
+	&twts_threshold_down.attr,
+	&nwns_threshold_up.attr,
+	&nwns_threshold_down.attr,
 	NULL
 };
 
