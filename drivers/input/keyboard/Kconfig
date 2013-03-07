@@ -614,3 +614,9 @@ config KEYPAD_CYPRESS_TOUCH_BLN
 	  Say Y here to enable the backlight notification
 	  for android led-notification (modified liblight needed)
 
+config TOUCH_CYPRESS_SWEEP2WAKE
+	tristate "Sweep2Wake for Cypress based keypad"
+	depends on KEYPAD_CYPRESS_TOUCH
+	default n
+	help
+
