@@ -80,8 +80,8 @@ static struct msm_mpdec_tuners {
         .min_cpus = 1,
 };
 
-static unsigned int NwNs_Threshold[4] = {12, 0, 0, 20};
-static unsigned int TwTs_Threshold[4] = {140, 0, 0, 190};
+static unsigned int NwNs_Threshold[4] = {35, 0, 0, 5};
+static unsigned int TwTs_Threshold[4] = {250, 0, 0, 250};
 
 extern unsigned int get_rq_info(void);
 extern unsigned long acpuclk_get_rate(int);
