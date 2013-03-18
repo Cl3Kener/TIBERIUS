@@ -41,6 +41,9 @@
 #define MIN_FREQUENCY_UP_THRESHOLD		(11)
 #define MAX_FREQUENCY_UP_THRESHOLD		(100)
 #define MIN_FREQUENCY_DOWN_DIFFERENTIAL		(1)
+#define DEF_UI_DYNAMIC_SAMPLING_RATE		(20000)
+#define DEF_UI_COUNTER				(5)
+#define DEFAULT_SAMPLING_RATE				(50000)
 
 /*
  * The polling frequency of this governor depends on the capability of
@@ -55,6 +58,7 @@
 #define MIN_SAMPLING_RATE_RATIO			(2)
 
 static unsigned int min_sampling_rate;
+static unsigned int def_sampling_rate;
 
 #define LATENCY_MULTIPLIER			(1000)
 #define MIN_LATENCY_MULTIPLIER			(100)
@@ -62,6 +66,11 @@ static unsigned int min_sampling_rate;
 
 #define POWERSAVE_BIAS_MAXLEVEL			(1000)
 #define POWERSAVE_BIAS_MINLEVEL			(-1000)
+
+
+static unsigned int Touch_poke_attr[2] = {1026000, 810000};
+static unsigned int Touch_poke_boost_duration_ms = 0;
+static unsigned long Touch_poke_boost_till_jiffies = 0;
 
 static void do_dbs_timer(struct work_struct *work);
 static int cpufreq_governor_dbs(struct cpufreq_policy *policy,
@@ -107,6 +116,7 @@ static inline void dbs_timer_init(struct cpu_dbs_info_s *dbs_info);
 static inline void dbs_timer_exit(struct cpu_dbs_info_s *dbs_info);
 
 static unsigned int dbs_enable;	/* number of CPUs using this policy */
+static unsigned int g_ui_counter = 0;
 
 /*
  * dbs_mutex protects dbs_enable in governor start/stop.
@@ -125,6 +135,10 @@ static struct dbs_tuners {
 	unsigned int sampling_down_factor;
 	int          powersave_bias;
 	unsigned int io_is_busy;
+	unsigned int touch_poke;
+	unsigned int origin_sampling_rate;
+	unsigned int ui_sampling_rate;
+	unsigned int ui_counter;
 #ifdef CONFIG_CPU_FREQ_GOV_ONDEMAND_2_PHASE
 	unsigned int two_phase_freq;
 #endif
@@ -138,6 +152,10 @@ static struct dbs_tuners {
 #ifdef CONFIG_CPU_FREQ_GOV_ONDEMAND_2_PHASE
 	.two_phase_freq = 0,
 #endif
+	.touch_poke = 1,
+	.ui_sampling_rate = DEF_UI_DYNAMIC_SAMPLING_RATE,
+	.ui_counter = DEF_UI_COUNTER,
+	
 };
 
 static inline cputime64_t get_cpu_idle_time_jiffy(unsigned int cpu,
@@ -297,6 +315,9 @@ show_one(up_threshold, up_threshold);
 show_one(down_differential, down_differential);
 show_one(sampling_down_factor, sampling_down_factor);
 show_one(ignore_nice_load, ignore_nice);
+show_one(touch_poke, touch_poke);
+show_one(ui_sampling_rate, ui_sampling_rate);
+show_one(ui_counter, ui_counter);
 #ifdef CONFIG_CPU_FREQ_GOV_ONDEMAND_2_PHASE
 show_one(two_phase_freq, two_phase_freq);
 #endif
@@ -334,6 +355,54 @@ static ssize_t store_two_phase_freq(struct kobject *a, struct attribute *b,
 	return count;
 }
 #endif
+
+static ssize_t store_touch_poke(struct kobject *a, struct attribute *b,
+				   const char *buf, size_t count)
+{
+	int ret;
+	ret = sscanf(buf, "%u,%u,%u", &Touch_poke_attr[0], &Touch_poke_attr[1],
+		&Touch_poke_boost_duration_ms);
+	if (ret < 2)
+		return -EINVAL;
+
+	if (ret != 3)
+		Touch_poke_boost_duration_ms = 0;
+
+	if(Touch_poke_attr[0] == 0)
+		dbs_tuners_ins.touch_poke = 0;
+	else
+		dbs_tuners_ins.touch_poke = 1;
+
+	return count;
+}
+
+static ssize_t store_ui_sampling_rate(struct kobject *a, struct attribute *b,
+					const char *buf, size_t count)
+{
+	unsigned int input;
+	int ret;
+	ret = sscanf(buf, "%u", &input);
+	if (ret != 1)
+		return -EINVAL;
+
+	dbs_tuners_ins.ui_sampling_rate = max(input, min_sampling_rate);
+
+	return count;
+}
+
+static ssize_t store_ui_counter(struct kobject *a, struct attribute *b,
+				const char *buf, size_t count)
+{
+	unsigned int input;
+	int ret;
+
+	ret = sscanf(buf, "%u", &input);
+	if(ret != 1)
+		return -EINVAL;
+
+	dbs_tuners_ins.ui_counter = input;
+	return count;
+}
 
 static ssize_t store_io_is_busy(struct kobject *a, struct attribute *b,
 				   const char *buf, size_t count)
@@ -518,6 +587,9 @@ define_one_global_rw(powersave_bias);
 #ifdef CONFIG_CPU_FREQ_GOV_ONDEMAND_2_PHASE
 define_one_global_rw(two_phase_freq);
 #endif
+define_one_global_rw(touch_poke);
+define_one_global_rw(ui_sampling_rate);
+define_one_global_rw(ui_counter);
 
 static struct attribute *dbs_attributes[] = {
 	&sampling_rate_min.attr,
@@ -531,6 +603,9 @@ static struct attribute *dbs_attributes[] = {
 	&two_phase_freq.attr,
 #endif
 	&io_is_busy.attr,
+	&touch_poke.attr,
+	&ui_sampling_rate.attr,
+	&ui_counter.attr,
 	NULL
 };
 
@@ -573,6 +648,12 @@ static void dbs_check_cpu(struct cpu_dbs_info_s *this_dbs_info)
 #endif
 	this_dbs_info->freq_lo = 0;
 	policy = this_dbs_info->cur_policy;
+
+	/*
+	 * keep freq for touch boost
+	 */
+	if (Touch_poke_boost_till_jiffies > jiffies)
+		return;
 
 	/*
 	 * Every sampling_rate, we check, if current idle time is less
@@ -652,6 +733,12 @@ static void dbs_check_cpu(struct cpu_dbs_info_s *this_dbs_info)
 		load_freq = load * freq_avg;
 		if (load_freq > max_load_freq)
 			max_load_freq = load_freq;
+	}
+
+	if (g_ui_counter > 0){
+		g_ui_counter--;
+		if(g_ui_counter == 0)
+			dbs_tuners_ins.sampling_rate = dbs_tuners_ins.origin_sampling_rate;
 	}
 
 	/* Check for frequency increase */
@@ -830,6 +917,8 @@ static void dbs_refresh_callback(struct work_struct *unused)
 	struct cpufreq_policy *policy;
 	struct cpu_dbs_info_s *this_dbs_info;
 	unsigned int cpu = smp_processor_id();
+	unsigned int nr_cpus;
+	unsigned int touch_poke_freq;
 
 	if (lock_policy_rwsem_write(cpu) < 0)
 		return;
@@ -842,10 +931,21 @@ static void dbs_refresh_callback(struct work_struct *unused)
 		return;
 	}
 
-	if (policy->cur < policy->max) {
-		policy->cur = policy->max;
+	g_ui_counter = dbs_tuners_ins.ui_counter;
+	if(dbs_tuners_ins.ui_counter > 0)
+		dbs_tuners_ins.sampling_rate = dbs_tuners_ins.ui_sampling_rate;
+	if (Touch_poke_boost_duration_ms)
+		Touch_poke_boost_till_jiffies =
+			jiffies + msecs_to_jiffies(Touch_poke_boost_duration_ms);
 
-		__cpufreq_driver_target(policy, policy->max,
+
+	nr_cpus = num_online_cpus();
+	touch_poke_freq = Touch_poke_attr[nr_cpus-1];
+
+	if (policy->cur < touch_poke_freq) {
+		//policy->cur = policy->max;
+		printk(KERN_ERR "%s: set cpufreq to (%d) directly due to input events!\n", __func__, touch_poke_freq);
+		__cpufreq_driver_target(policy, touch_poke_freq,
 					CPUFREQ_RELATION_L);
 		this_dbs_info->prev_cpu_idle = get_cpu_idle_time(cpu,
 				&this_dbs_info->prev_cpu_wall);
@@ -858,32 +958,18 @@ static void dbs_input_event(struct input_handle *handle, unsigned int type,
 {
 	int i;
 
-#if 1 /* samsung feature */
-	int found = 0;
-#endif
-
-	if ((dbs_tuners_ins.powersave_bias == POWERSAVE_BIAS_MAXLEVEL) ||
-		(dbs_tuners_ins.powersave_bias == POWERSAVE_BIAS_MINLEVEL)) {
-		/* nothing to do */
-		return;
-	}
-
-#if 1 /* samsung feature */
-	/* only sec touchevent */
-	if (!strncmp(handle->dev->name,
-			"sec_touchscreen", strlen("sec_touchscreen"))) {
-		found = 1;
-	} else if (!strncmp(handle->dev->name,
-			"sec_e-pen", strlen("sec_e-pen"))) {
-		found = 1;
-	}
-
-	if(!found)
-		return;
-#endif
-	i = 0;
-/*	for_each_online_cpu(i) */{
+	if (dbs_tuners_ins.touch_poke)
+	for_each_online_cpu(i)
 		queue_work_on(i, input_wq, &per_cpu(dbs_refresh_work, i));
+}
+
+static int input_dev_filter(const char *input_dev_name)
+{
+	if (strstr(input_dev_name, "sec_touchscreen") || strstr(input_dev_name, "-keypad") ||
+		strstr(input_dev_name, "-nav") || strstr(input_dev_name, "-oj")) {
+		return 0;
+	} else {
+		return 1;
 	}
 }
 
@@ -892,6 +978,10 @@ static int dbs_input_connect(struct input_handler *handler,
 {
 	struct input_handle *handle;
 	int error;
+
+	/* filter out those input_dev that we don't care */
+	if (input_dev_filter(dev->name))
+		return -ENODEV;
 
 	handle = kzalloc(sizeof(struct input_handle), GFP_KERNEL);
 	if (!handle)
@@ -994,6 +1084,9 @@ static int cpufreq_governor_dbs(struct cpufreq_policy *policy,
 			dbs_tuners_ins.sampling_rate =
 				max(min_sampling_rate,
 				    latency * LATENCY_MULTIPLIER);
+			if (def_sampling_rate)
+				dbs_tuners_ins.sampling_rate = def_sampling_rate;
+			dbs_tuners_ins.origin_sampling_rate = dbs_tuners_ins.sampling_rate;
 			dbs_tuners_ins.io_is_busy = should_io_be_busy();
 		}
 		if (!cpu)
@@ -1071,6 +1164,8 @@ static int __init cpufreq_gov_dbs_init(void)
 		min_sampling_rate =
 			MIN_SAMPLING_RATE_RATIO * jiffies_to_usecs(10);
 	}
+
+	def_sampling_rate = DEFAULT_SAMPLING_RATE;
 
 	input_wq = create_workqueue("iewq");
 	if (!input_wq) {
