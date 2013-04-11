@@ -356,9 +356,7 @@ void touchkey_work_func(struct work_struct *p)
 		if (data[0] & UPDOWN_EVENT_BIT) {
 			input_report_key(touchkey_driver->input_dev, touchkey_keycode[data[0] & KEYCODE_BIT], 0);
 			input_sync(touchkey_driver->input_dev);
-			#ifndef CONFIG_USA_MODEL_SGH_T989
 			printk(KERN_DEBUG "[TKEY] touchkey release keycode:%d \n", touchkey_keycode[data[0] & KEYCODE_BIT]);
-			#endif
 		} else {
 			if (touch_is_pressed) {
 				printk(KERN_DEBUG "[TKEY] touchkey pressed but don't send event because touch is pressed. \n");
@@ -368,9 +366,7 @@ void touchkey_work_func(struct work_struct *p)
 				}
 				input_report_key(touchkey_driver->input_dev, touchkey_keycode[data[0] & KEYCODE_BIT], 1);
 				input_sync(touchkey_driver->input_dev);
-				#ifndef CONFIG_USA_MODEL_SGH_T989
 				printk(KERN_DEBUG "[TKEY] touchkey press keycode:%d \n", touchkey_keycode[data[0] & KEYCODE_BIT]);
-				#endif
 			}
 		}
 
@@ -486,10 +482,7 @@ static irqreturn_t touchkey_interrupt(int irq, void *dummy)  // ks 79 - threaded
 			touchkey_pressed &= ~(1 << (data[0] & KEYCODE_BIT));
 			input_sync(touchkey_driver->input_dev);
 //			if(g_debug_switch)
-#ifndef CONFIG_USA_MODEL_SGH_T989
 				printk(KERN_DEBUG "touchkey release keycode:%d \n", touchkey_keycode[data[0] & KEYCODE_BIT]);
-#endif
-				
 		}else{
 			input_report_key(touchkey_driver->input_dev, press_check, 0);
 	        }
@@ -506,9 +499,7 @@ static irqreturn_t touchkey_interrupt(int irq, void *dummy)  // ks 79 - threaded
 			input_sync(touchkey_driver->input_dev);
 			press_check = touchkey_keycode[data[0] & KEYCODE_BIT];
 //			if(g_debug_switch)
-                                #ifndef CONFIG_USA_MODEL_SGH_T989
 				printk(KERN_DEBUG "touchkey press keycode:%d \n", touchkey_keycode[data[0] & KEYCODE_BIT]);
-				#endif
 		}
 	}
 #else
@@ -518,14 +509,11 @@ static irqreturn_t touchkey_interrupt(int irq, void *dummy)  // ks 79 - threaded
 		input_sync(touchkey_driver->input_dev);
 
 //		if(g_debug_switch)
-#ifndef CONFIG_USA_MODEL_SGH_T989
 			printk(KERN_DEBUG "touchkey release keycode:%d \n", touchkey_keycode[data[0] & KEYCODE_BIT]);
-#endif
+
 	#if defined(CONFIG_USA_MODEL_SGH_I717)
-	#ifndef CONFIG_USA_MODEL_SGH_T989
 		if(Q1_debug_msg)
 			printk(KERN_DEBUG "touchkey release keycode:%d \n", touchkey_keycode[data[0] & KEYCODE_BIT]);
-	#endif
 	#endif
 
 	} else {
@@ -540,15 +528,11 @@ static irqreturn_t touchkey_interrupt(int irq, void *dummy)  // ks 79 - threaded
 			input_sync(touchkey_driver->input_dev);
 
 //			if(g_debug_switch)
-                                #ifndef CONFIG_USA_MODEL_SGH_T989 
 				printk(KERN_DEBUG "touchkey press keycode:%d \n", touchkey_keycode[data[0] & KEYCODE_BIT]);
-				#endif
 
 		#if defined(CONFIG_USA_MODEL_SGH_I717)
-//			if(Q1_debug_msg)      
-                                #ifndef CONFIG_USA_MODEL_SGH_T989
+//			if(Q1_debug_msg)
 				printk(KERN_DEBUG "touchkey press keycode:%d \n", touchkey_keycode[data[0] & KEYCODE_BIT]);
-				#endif
 		#endif
 		}
 	}
