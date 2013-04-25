@@ -46,7 +46,7 @@
  * The PLL hardware is capable of 384MHz to 1536MHz. The L_VALs
  * used for calibration should respect these limits. */
 #define L_VAL_SCPLL_CAL_MIN	0x08 /* =  432 MHz with 27MHz source */
-#define L_VAL_SCPLL_CAL_MAX	0x1C /* = 1512 MHz with 27MHz source */
+#define L_VAL_SCPLL_CAL_MAX	0x22 /* = 1836 MHz with 27MHz source */
 
 #define MIN_VDD_SC		700000 /* uV */
 #define MAX_VDD_SC		1350000 /* uV */
