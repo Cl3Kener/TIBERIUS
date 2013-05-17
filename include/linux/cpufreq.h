@@ -506,6 +506,9 @@ extern struct cpufreq_governor cpufreq_gov_fantasy;
 #elif defined(CONFIG_CPU_FREQ_DEFAULT_GOV_SAKURACTIVE)
 extern struct cpufreq_governor cpufreq_gov_sakuractive;
 #define CPUFREQ_DEFAULT_GOVERNOR 	(&cpufreq_gov_sakuractive)
+#elif defined(CONFIG_CPU_FREQ_DEFAULT_GOV_SAMSUNG)
+extern struct cpufreq_governor cpufreq_gov_samsung;
+#define CPUFREQ_DEFAULT_GOVERNOR  	(&cpufreq_gov_samsung) 
 #endif
 
 
