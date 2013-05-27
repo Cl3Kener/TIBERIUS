@@ -124,9 +124,6 @@ choice
 	config DEFAULT_CFQ
 		bool "CFQ" if IOSCHED_CFQ=y
 
-	config DEFAULT_BFQ
-		bool "BFQ" if IOSCHED_BFQ=y
-
 	config DEFAULT_NOOP
 		bool "No-op"
 
@@ -146,7 +143,6 @@ config DEFAULT_IOSCHED
 	default "deadline" if DEFAULT_DEADLINE
 	default "row" if DEFAULT_ROW
 	default "cfq" if DEFAULT_CFQ
-	default "bfq" if DEFAULT_BFQ
 	default "noop" if DEFAULT_NOOP
   	default "sio" if DEFAULT_SIO
    	default "vr" if DEFAULT_VR 
