@@ -35,6 +35,7 @@ obj-$(CONFIG_CPU_FREQ_GOV_ABYSSPLUG)	+= cpufreq_abyssplug.o
 obj-$(CONFIG_CPU_FREQ_GOV_SLP)		+= cpufreq_slp.o
 obj-$(CONFIG_CPU_FREQ_GOV_WHEATLEY)	+= cpufreq_wheatley.o
 obj-$(CONFIG_CPU_FREQ_GOV_MINMAX)  	+= cpufreq_minmax.o
+obj-$(CONFIG_CPU_FREQ_GOV_MINMAX)  	+= cpufreq_ondemandx.o
 obj-$(CONFIG_CPU_FREQ_GOV_LIONHEART)  	+= cpufreq_lionheart.o
 obj-$(CONFIG_CPU_FREQ_GOV_SAVAGEDZEN)	+= cpufreq_savaged_zen.o
 obj-$(CONFIG_CPU_FREQ_GOV_FANTASY)    	+= cpufreq_fantasy.o
