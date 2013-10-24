@@ -380,6 +380,10 @@ config CPU_FREQ_DEFAULT_GOV_SAMSUNG
   	bool "samsung"
   	select CPU_FREQ_GOV_SAMSUNG
 
+config CPU_FREQ_DEFAULT_GOV_HYPER
+  	bool "HYPER"
+	select CPU_FREQ_GOV_HYPER  
+
 endchoice
 
 config CPU_FREQ_GOV_PERFORMANCE
@@ -829,6 +833,10 @@ config CPU_FREQ_GOV_SAMSUNG
 
     	If in doubt, say N.
           
+config CPU_FREQ_GOV_HYPER
+	tristate "'HYPER' cpufreq policy governor"
+	depends on CPU_FREQ  
+
 config CPU_FREQ_MIN_TICKS
 	int "Ticks between governor polling interval."
 	default 10
